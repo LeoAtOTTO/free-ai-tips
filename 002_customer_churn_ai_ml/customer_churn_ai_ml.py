@@ -16,6 +16,7 @@ from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.preprocessing import LabelEncoder
 from xgboost import XGBClassifier
 import xgboost as xgb
+from pytimetk import glimpse
 
 import pandas as pd
 import numpy as np
@@ -43,6 +44,7 @@ client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
 # DATASET 
 df = pd.read_csv(PATH_ROOT + "/data/customer_churn.csv")
+glimpse(df)
 
 # ---------------------------
 # 2. Generate Summaries with an LLM
@@ -68,7 +70,7 @@ df['ticket_summary'] = df['ticket_notes'].apply(summarize_ticket)
 # df.to_csv(PATH_ROOT + "/data/customer_churn_summary.csv", index=False)
 
 df = pd.read_csv( PATH_ROOT + "/data/customer_churn_summary.csv")
-df
+df[df['churn'] == 1]['ticket_summary']
 
 # ---------------------------
 # 3. Get Embeddings for Summaries
@@ -88,10 +90,11 @@ def get_embeddings(text):
 df['summary_embedding'] = df['ticket_summary'].apply(get_embeddings)
 
 # df.to_csv(PATH_ROOT + "/data/customer_churn_summary_embeddings.csv", index=False)
-
 df = pd.read_csv(PATH_ROOT + "/data/customer_churn_summary_embeddings.csv")
 
 df
+df['summary_embedding']
+glimpse(df)
 
 # ---------------------------
 # 4. Prepare Features
@@ -102,9 +105,11 @@ df['plan_type_encoded'] = LabelEncoder().fit_transform(df['plan_type'])
 df['summary_embedding'] = df['summary_embedding'].apply(ast.literal_eval)
 
 embeddings_df = pd.DataFrame(df['summary_embedding'].tolist(), index=df.index)
+embeddings_df[422]
 
 # Combine your original numeric features with the embedding columns
 X_df = pd.concat([df[['age','tenure','spend_rate','plan_type_encoded']], embeddings_df], axis=1)
+# X_df = pd.concat([df[['age','tenure','spend_rate','plan_type_encoded']], embeddings_df[422]], axis=1)
 
 # Ensure all columns are numeric
 X_df = X_df.astype('float32')
@@ -164,5 +169,6 @@ df_top_feat_importance = df.copy()
 df_top_feat_importance[422] = X_df[422]
 
 df_top_feat_importance.sort_values(by=422, ascending=False).head(10)
+df_top_feat_importance.sort_values(by=422, ascending=False).tail(10)
 
 
